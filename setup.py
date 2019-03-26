@@ -2,32 +2,32 @@ from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 from os.path import join
 
-project_root = 'Correlation_Module'
-sources = [join(project_root, file) for file in ['correlation.cpp',
-                                                 'correlation_sampler.cpp',
-                                                 'correlation_cuda_kernel.cu']]
+project_root = 'Warp_Module'
+sources = [join(project_root, file) for file in ['proj.cpp',
+                                                 'proj_interface.cpp',
+                                                 'proj_cuda.cu']]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name='spatial_correlation_sampler',
-    version="0.0.8",
+    name='direct warp',
+    version="0.0.1",
     author="Clément Pinard",
     author_email="clement.pinard@ensta-paristech.fr",
-    description="Correlation module for pytorch",
+    description="Direct Warp module for pytorch",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ClementPinard/Pytorch-Correlation-extension",
+    url="https://github.com/ClementPinard/Pytorch-Direct-Warp-extension",
     install_requires=['torch>=0.4.1','numpy'],
     ext_modules=[
-        CUDAExtension('spatial_correlation_sampler_backend',
+        CUDAExtension('direct_proj_backend',
                       sources,
                       extra_compile_args={'cxx': ['-fopenmp'], 'nvcc':[]},
                       extra_link_args=['-lgomp'])
     ],
-    package_dir={'': project_root},
-    packages=['spatial_correlation_sampler'],
+    package_dir={'pytorch_direct_warp': 'Warp_Module'},
+    packages=['pytorch_direct_warp.direct_warp','pytorch_direct_warp.direct_proj','pytorch_direct_warp.occlusion_mapper'],
     cmdclass={
         'build_ext': BuildExtension
     },

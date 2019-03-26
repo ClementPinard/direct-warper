@@ -1,9 +1,8 @@
-# Correlation module
+# Direct Warp module
 
-this is a custom C++/Cuda implementation of Correlation module, used e.g. in [FlowNetC](https://arxiv.org/abs/1504.06852)
+this is a custom C++/Cuda implementation of Direct Warp module, a simple graphic pipeline for direct image warping, designed so that occluded area are invalid. Be careful, this operation is not spatially diffrentiable !
 
-This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was used as a basis for implementation, as well as
-[NVIDIA's cuda code](https://github.com/NVIDIA/flownet2-pytorch/tree/master/networks/correlation_package)
+This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was used as a basis for implementation
 
 - Build and Install C++ and CUDA extensions by executing `python setup.py install`,
 - Benchmark C++ vs. CUDA by running `python benchmark.py {cpu, cuda}`,
@@ -13,68 +12,62 @@ This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was us
 
 This module is expected to compile for Pytorch `0.4.1`, on `Python > 3.5` and `Python 2.7`.
 
-# Installation
+# Usage direct projection
 
-this module is available on pip
+`from pytorch_direct_warp.direct_proj import direct_projection`
 
-`pip install spatial-correlation-sampler`
+Every image to warp is considered as a "square" cloud, so each point will have a 3D position and a size.
 
-# Usage
-
-API has a few difference with NVIDIA's module
- * output is now a 5D tensor, which reflects the shifts horizontal and vertical.
+```
+input (B x C x N), pos and size (B x N x 4), frame matrix (B x 3 x 3) -> output (B x C x H x W), warped depth (B x H x W)
  ```
-input (B x C x H x W) -> output (B x PatchH x PatchW x oH x oW)
- ```
- * Output sizes `oH` and `oW` are no longer dependant of patch size, but only of kernel size and padding
- * Patch size `patch_size` is now the whole patch, and not only the radii.
- * `stride1` is now `stride` and`stride2` is `dilation_patch`, which behave like dilated convolutions
- * equivalent `max_displacement` is then `dilation_patch * (patch_size - 1) / 2`.
- * to get the right parameters for FlowNetC, you would have
- ```
-kernel_size=1
-patch_size=21,
-stride=1,
-padding=0,
-dilation_patch=2
- ```
+Its rendering is based on a simple loop which will colorize the area `[(x-s/2)z, (x+s/2)/z] x [(y-s/2)/z, (y+s/2)/z]` provided it has not already been colorized with a closer square (lower `z`). `x,y,z,s` are the 4 parametersof the point cloud `pos_size`.
 
-# Benchmark
+Note that for a simple warp, size `s` is equal to depth `z`, because it is the exact size so that the camera field of view is completely filled. Alos, Number of points `N` is simply unravelled depth dimensions `H * W`
 
- * default parameters are from `benchmark.py`, FlowNetC parameters are same as use in `FlowNetC` with a batch size of 4, described in [this paper](https://arxiv.org/abs/1504.06852), implemented [here](https://github.com/lmb-freiburg/flownet2) and [here](https://github.com/NVIDIA/flownet2-pytorch/blob/master/networks/FlowNetC.py).
- * Feel free to file an issue to add entries to this with your hardware !
+if input is not provided, only warped depth is outputted.
 
-## CUDA Benchmark
+As there is not interpolation, outputs are not spacially differentiable, but the module keeps a lookup table so that pixel value (depth and input) differentiation is back propagated
 
- * See [here](https://gist.github.com/ClementPinard/270e910147119831014932f67fb1b5ea) for a benchmark script working with [NVIDIA](https://github.com/NVIDIA/flownet2-pytorch/tree/master/networks/correlation_package)'s code, and Pytorch `0.3`.
- * Benchmark are launched with environment variable `CUDA_LAUNCH_BLOCKING` set to `1`.
- * Only `float32` is benchmarked.
+An exemple is available in notebooks/example_projection.ipynb
 
- | implementation | Correlation parameters |  device |     pass |      min time |      avg time |
- | -------------- | ---------------------- | ------- | -------- | ------------: | ------------: |
- |           ours |                default | 980 GTX |  forward |  **5.313 ms** |  **5.339 ms** |
- |           ours |                default | 980 GTX | backward |    103.500 ms |    103.685 ms |
- |         NVIDIA |                default | 980 GTX |  forward |     12.763 ms |     12.844 ms |
- |         NVIDIA |                default | 980 GTX | backward | **74.043 ms** | **74.323 ms** |
- |                |                        |         |          |               |               |
- |           ours |               FlowNetC | 980 GTX |  forward |  **5.600 ms** |  **5.694 ms** |
- |           ours |               FlowNetC | 980 GTX | backward | **74.719 ms** | **75.122 ms** |
- |         NVIDIA |               FlowNetC | 980 GTX |  forward |      8.640 ms |      8.805 ms |
- |         NVIDIA |               FlowNetC | 980 GTX | backward |     75.757 ms |     76.873 ms |
- 
-### Notes
- * The large overhead of our implementation regarding `kernel_size` > 1 needs some investigation, feel free to
- dive in the code to improve it !
- * The backward pass of NVIDIA is not entirely correct when stride1 > 1 and kernel_size > 1, because not everything
- is computed, see [here](https://github.com/NVIDIA/flownet2-pytorch/blob/master/networks/correlation_package/src/correlation_cuda_kernel.cu#L120).
+# Usage direct warping
 
-## CPU Benchmark
+`from pytorch_direct_warp.direct_warp import DirectWarper`
 
-  * No other implementation is avalaible on CPU.
+Thanks to this wrapper, direct depth and img warping is simplified. You need to provide a `BxHxW` depth tensor and an optional `BxCxHxW` image tensor, as long as a `Bx3x4`transformation matrix, and `Bx3x3` intrinsics and its inverse.
 
- | Correlation parameters |               device |     pass |    min time |    avg time |
- | ---------------------- | -------------------- | -------- | ----------: | ----------: |
- |                default | E5-2630 v3 @ 2.40GHz |  forward |  159.616 ms |  188.727 ms |
- |                default | E5-2630 v3 @ 2.40GHz | backward |  282.641 ms |  294.194 ms |
- |               FlowNetC | E5-2630 v3 @ 2.40GHz |  forward |  576.716 ms |  582.069 ms |
- |               FlowNetC | E5-2630 v3 @ 2.40GHz | backward | 1663.429 ms | 1663.429 ms |
+An example is avalaible in notebooks/example_warping.ipynb
+
+# Occlusion map generator
+
+Occlusion map for a depth and a pose can be obtained by warping depth and warping it back. Missing points in the resulting output have been detected as occluded or out of bound, and it is reasonable to dismiss them from any photometric loss since these points don't occur in the next frame.
+
+This operation does not need any differentiation, it is designed to be used with an inverse warping operation, e.g. [here](https://github.com/ClementPinard/SfmLearner-Pytorch/blob/master/inverse_warp.py)
+
+An exemple is available in notebooks/example_occlusion.ipynb
+
+# Inverse warp vs Direct Warp examples
+
+This section discusses the fundamental differences between direct and inverse warping for a set of points with depth and pose.
+Throughout the whole experiment, we consider two `50x50` Images `I1` `I2` and a depth Map `D` corresponding to `I1`. If specified otherwise, the pose between the two frames is `P = T[-1,-1,0], R identity`, which means the camera went up and left with no rotation.
+
+![problem](imgs.png)
+
+Using frame matrix and depth, we can get a point cloud corresponding to 2D coordinates in `I1` and with the pose, in `I2` . In the end, the needed coordinates can be summed with this (u,v) chart `T` of `I1` pixels in `I2`. you then get for `[i,j] in [0,50]x[0,50]` 
+`Î1[i,j] = I2[T[i][j]]`
+
+![T](img/uv.png)
+
+By using these coordinates, inverse warp will try to reconstruct `I1` with pixels from `I2`, while direct warp will try to reconstruct `I2` with pixels from `I1`.
+
+![inverse](img/inverse_warp.png)
+
+![direct](img/direct_warp.png)
+
+As you can see, while the inverse warp shows duplication artefacts, the direct Warp shows Nan values where no colorization was done.
+The main interest of this direct warp here is to warp and warp back the depth in its original coordinate system. That way, you can see that occluded values are now considered NaNs.
+
+A simple scheme of erosions/dilations can then make the picture have a safe area were photometric error regarding `Î1` with inverse warp should not be optimized.
+
+![filtered](img/filtered.png)
