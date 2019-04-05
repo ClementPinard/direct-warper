@@ -32,9 +32,9 @@ static void projection(
   do{
       int u = std::max(u0, 0);
       do{
-          if (Z < projected_depth[u][v]){
-            projected_depth[u][v] = Z;
-            index[u][v] = n;
+          if (Z < projected_depth[v][u]){
+            projected_depth[v][u] = Z;
+            index[v][u] = n;
           }
           u++;
       }while(u < du and u < W);
