@@ -32,9 +32,10 @@ static void projection(
   do{
       int u = std::max(u0, 0);
       do{
-          if (Z < projected_depth[u][v])
+          if (Z < projected_depth[u][v]){
             projected_depth[u][v] = Z;
             index[u][v] = n;
+          }
           u++;
       }while(u < du and u < W);
       v++;
@@ -104,13 +105,13 @@ at::Tensor proj_img_cpp_forward(
 }
 
 at::Tensor proj_img_cpp_backward(
-    at::Tensor gradOutput,
     at::Tensor index,
+    at::Tensor gradOutput,
     int N) {
   const int batch_size = gradOutput.size(0);
   const int C = gradOutput.size(1);
-  const int W = gradOutput.size(2);
-  const int H = gradOutput.size(3);
+  const int W = index.size(1);
+  const int H = index.size(2);
 
   auto gradInput = at::zeros({batch_size, C, N}, gradOutput.options());
   int b, c, h, w;
@@ -124,7 +125,8 @@ at::Tensor proj_img_cpp_backward(
 
           for (h = 0; h < H; ++h){
             for (w = 0; w < W; ++w){
-              gradInput_acc[b][c][index_acc[b][h][w]] = gradOutput_acc[b][c][h][w];
+              if (index_acc[b][h][w] >= 0)
+                gradInput_acc[b][c][index_acc[b][h][w]] += gradOutput_acc[b][c][h][w];
             }
           }
         }));
@@ -134,14 +136,14 @@ at::Tensor proj_img_cpp_backward(
 }
 
 at::Tensor proj_depth_cpp_backward(
-    at::Tensor gradOutput,
     at::Tensor index,
+    at::Tensor gradOutput,
     int N) {
   const int batch_size = gradOutput.size(0);
-  const int W = gradOutput.size(2);
-  const int H = gradOutput.size(3);
+  const int W = index.size(1);
+  const int H = index.size(2);
 
-  auto gradInput = at::zeros({batch_size, N, 4}, gradOutput.options());
+  auto gradInput = at::zeros({batch_size, 4, N}, gradOutput.options());
   int b, h, w;
   #pragma omp parallel for private(b, h, w)
     for (b = 0; b < batch_size; ++b){
@@ -151,7 +153,8 @@ at::Tensor proj_depth_cpp_backward(
         auto gradInput_acc = gradInput.accessor<scalar_t, 3>();
         for (h = 0; h < H; ++h){
           for (w = 0; w < W; ++w){
-            gradInput_acc[b][index_acc[b][h][w]][2] = gradOutput_acc[b][h][w];
+            if (index_acc[b][h][w] >= 0)
+              gradInput_acc[b][2][index_acc[b][h][w]] += gradOutput_acc[b][h][w];
           }
         }
       }));

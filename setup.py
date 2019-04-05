@@ -23,7 +23,8 @@ setup(
     ext_modules=[
         CUDAExtension('direct_proj_backend',
                       sources,
-                      extra_compile_args={'cxx': ['-fopenmp'], 'nvcc':[]},
+                      extra_compile_args={'cxx': ['-fopenmp'], 'nvcc':['-gencode=arch=compute_50,code=compute_50',
+                                                                       '-gencode=arch=compute_60,code=compute_60']},
                       extra_link_args=['-lgomp'])
     ],
     package_dir={'pytorch_direct_warp': 'Warp_Module'},

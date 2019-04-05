@@ -33,8 +33,6 @@ static __inline__ __device__ double atomicAdd(double *address, double val) {
   } while (assumed != old);
   return __longlong_as_double(old);
 }
-
-
 #endif
 
 template <typename scalar_t, int dims>
@@ -45,6 +43,18 @@ toDeviceTensor(at::Tensor t) {
 }
 
 namespace {
+
+__device__ __forceinline__ bool SpecialMin (double z, double* projected_depth) {
+  unsigned long long val = (unsigned long long) __double_as_longlong(z);
+  unsigned long long old = atomicMin((unsigned long long*) projected_depth, val);
+  return(old >= val);
+}
+
+__device__ __forceinline__ bool SpecialMin (float z, float* projected_depth) {
+  int val = __float_as_int(z);
+  int old = atomicMin((int*) projected_depth, val);
+  return(old >= val);
+}
 
 template <typename scalar_t>
 __global__ void proj_cuda_forward_kernel(
@@ -89,10 +99,7 @@ __global__ void proj_cuda_forward_kernel(
                 old_index = *index_addr;
                 do{
                     assumed = old_index;
-                    int val = __float_as_int(Z);
-                    scalar_t* addr = &projected_depth[b][v][u];
-                    unsigned long long old = atomicMin((int*) addr, val);
-                    if (old >= val){
+                    if (SpecialMin(Z, &projected_depth[b][v][u])){
                         old_index = atomicCAS(index_addr, assumed, (unsigned long long) p);
                     }
                 }while(assumed != old_index);
@@ -202,7 +209,7 @@ std::vector<at::Tensor> proj_depth_cuda_forward(
   const int threads = CUDA_NUM_THREADS;
   const int blocks = (num_points + CUDA_NUM_THREADS -1) / CUDA_NUM_THREADS;
 
-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(points.type(), "proj_depth_forward_cuda", ([&] {
+  AT_DISPATCH_FLOATING_TYPES(points.type(), "proj_depth_forward_cuda", ([&] {
     projected_depth.fill_(std::numeric_limits<scalar_t>::infinity());
     proj_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
         toDeviceTensor<scalar_t,3>(points),
@@ -228,7 +235,7 @@ at::Tensor proj_img_cuda_forward(
   const int threads = CUDA_NUM_THREADS;
   const int blocks = (num_points + CUDA_NUM_THREADS -1) / CUDA_NUM_THREADS;
 
-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(colors.type(), "proj_img_forward_cuda", ([&] {
+  AT_DISPATCH_FLOATING_TYPES(colors.type(), "proj_img_forward_cuda", ([&] {
     projected_img.fill_(std::numeric_limits<scalar_t>::quiet_NaN());
     proj_img_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
         toDeviceTensor<long,3>(index),

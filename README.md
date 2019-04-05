@@ -5,12 +5,11 @@ this is a custom C++/Cuda implementation of Direct Warp module, a simple graphic
 This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was used as a basis for implementation
 
 - Build and Install C++ and CUDA extensions by executing `python setup.py install`,
-- Benchmark C++ vs. CUDA by running `python benchmark.py {cpu, cuda}`,
-- Run gradient checks on the code by running `python grad_check.py --backend {cpu, cuda}`.
+- Test three modules by executing `python test_projection.py`, `python test_warping.py` and `python test_occlusion_map.py`
 
 # Requirements
 
-This module is expected to compile for Pytorch `0.4.1`, on `Python > 3.5` and `Python 2.7`.
+This module is expected to compile for Pytorch `1.0.1`, on `Python > 3.5`.
 
 # Usage direct projection
 
@@ -52,7 +51,7 @@ An exemple is available in notebooks/example_occlusion.ipynb
 This section discusses the fundamental differences between direct and inverse warping for a set of points with depth and pose.
 Throughout the whole experiment, we consider two `50x50` Images `I1` `I2` and a depth Map `D` corresponding to `I1`. If specified otherwise, the pose between the two frames is `P = T[-1,-1,0], R identity`, which means the camera went up and left with no rotation.
 
-![problem](imgs.png)
+![problem](img/imgs.png)
 
 Using frame matrix and depth, we can get a point cloud corresponding to 2D coordinates in `I1` and with the pose, in `I2` . In the end, the needed coordinates can be summed with this (u,v) chart `T` of `I1` pixels in `I2`. you then get for `[i,j] in [0,50]x[0,50]` 
 `Î1[i,j] = I2[T[i][j]]`
@@ -68,6 +67,4 @@ By using these coordinates, inverse warp will try to reconstruct `I1` with pixel
 As you can see, while the inverse warp shows duplication artefacts, the direct Warp shows Nan values where no colorization was done.
 The main interest of this direct warp here is to warp and warp back the depth in its original coordinate system. That way, you can see that occluded values are now considered NaNs.
 
-A simple scheme of erosions/dilations can then make the picture have a safe area were photometric error regarding `Î1` with inverse warp should not be optimized.
-
-![filtered](img/filtered.png)
+A more in depth study of this occlusion module is avalaible at this address : https://gitlab.ensta.fr/pinard/thesis-notebooks

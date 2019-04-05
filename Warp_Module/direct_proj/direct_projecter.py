@@ -51,11 +51,12 @@ class DirectProjFunction(Function):
             return depth_map, index
 
     @once_differentiable
-    def backward(self, depth_grad_output, colors_grad_output=None):
+    def backward(self, depth_grad_output, *args):
         index = self.saved_variables[0]
 
         points_grad_input = proj.backward_depth(index, depth_grad_output, self.num_points)
         if self.with_colors:
+            colors_grad_output = args[0]
             colors_grad_input = proj.backward_img(index, colors_grad_output, self.num_points)
         else:
             colors_grad_input = None

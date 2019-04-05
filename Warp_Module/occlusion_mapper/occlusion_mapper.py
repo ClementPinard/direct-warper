@@ -22,20 +22,21 @@ def dilate(tensor, dilation):
 
 
 class OcclusionMapper(nn.Module):
-    def __init__(self, dilation=0):
+    def __init__(self, alpha=1.1, dilation=0):
         super(OcclusionMapper, self).__init__()
         self.warper = DirectWarper()
         self.dilation = dilation
+        self.alpha = alpha
 
-    def forward(self, depth, pose_matrix, intrinsics, intrinsics_inv):
+    def forward(self, depth, pose_matrix, intrinsics):
 
-        warped_depth = self.warper(depth, None, pose_matrix, intrinsics, intrinsics_inv)
+        warped_depth = self.warper(depth, None, pose_matrix, intrinsics)
 
         inv_rot_matrix = pose_matrix[:,:,:3].transpose(1,2)
         inv_tr = -inv_rot_matrix @ pose_matrix[:,:,-1:]
 
         inv_pose_matrix = torch.cat([inv_rot_matrix, inv_tr], dim=2)
-        warped_depth_back = self.warper(warped_depth, None, inv_pose_matrix, intrinsics, intrinsics_inv)
+        warped_depth_back = self.warper(warped_depth, None, inv_pose_matrix, intrinsics)
 
-        invalid_points = warped_depth_back == float('inf')
+        invalid_points = (warped_depth_back < depth/self.alpha) | (warped_depth_back > depth*self.alpha)
         return dilate(invalid_points, self.dilation)
