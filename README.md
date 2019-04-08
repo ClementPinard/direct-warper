@@ -1,6 +1,6 @@
 # Direct Warp module
 
-this is a custom C++/Cuda implementation of Direct Warp module, a simple graphic pipeline for direct image warping, designed so that occluded area are invalid. Be careful, this operation is not spatially diffrentiable !
+this is a custom C++/Cuda implementation of Direct Warp module, a simple graphic pipeline for direct image warping, designed so that occluded area are invalid. Be careful, this operation is not spatially differentiable !
 
 This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was used as a basis for implementation
 
@@ -28,23 +28,17 @@ if input is not provided, only warped depth is outputted.
 
 As there is not interpolation, outputs are not spacially differentiable, but the module keeps a lookup table so that pixel value (depth and input) differentiation is back propagated
 
-An exemple is available in notebooks/example_projection.ipynb
-
 # Usage direct warping
 
 `from pytorch_direct_warp.direct_warp import DirectWarper`
 
 Thanks to this wrapper, direct depth and img warping is simplified. You need to provide a `BxHxW` depth tensor and an optional `BxCxHxW` image tensor, as long as a `Bx3x4`transformation matrix, and `Bx3x3` intrinsics and its inverse.
 
-An example is avalaible in notebooks/example_warping.ipynb
-
 # Occlusion map generator
 
 Occlusion map for a depth and a pose can be obtained by warping depth and warping it back. Missing points in the resulting output have been detected as occluded or out of bound, and it is reasonable to dismiss them from any photometric loss since these points don't occur in the next frame.
 
 This operation does not need any differentiation, it is designed to be used with an inverse warping operation, e.g. [here](https://github.com/ClementPinard/SfmLearner-Pytorch/blob/master/inverse_warp.py)
-
-An exemple is available in notebooks/example_occlusion.ipynb
 
 # Inverse warp vs Direct Warp examples
 
