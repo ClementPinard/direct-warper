@@ -1,5 +1,11 @@
 # Direct Warp module
 
+This module has been created in the context of my PhD thesis.
+
+**Robust Learning of a depth map for obstacle avoidance with a monocular stabilized flying camera**
+
+See dedicated page [here](https://clementpinard.fr/phd_thesis/)
+
 this is a custom C++/Cuda implementation of Direct Warp module, a simple graphic pipeline for direct image warping, designed so that occluded area are invalid. Be careful, this operation is not spatially differentiable !
 
 This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was used as a basis for implementation
@@ -61,4 +67,4 @@ By using these coordinates, inverse warp will try to reconstruct `I1` with pixel
 As you can see, while the inverse warp shows duplication artefacts, the direct Warp shows Nan values where no colorization was done.
 The main interest of this direct warp here is to warp and warp back the depth in its original coordinate system. That way, you can see that occluded values are now considered NaNs.
 
-A more in depth study of this occlusion module is avalaible at this address : https://gitlab.ensta.fr/pinard/thesis-notebooks
+A more in depth study of this occlusion module is avalaible at this address : hhttps://github.com/ClementPinard/thesis-notebooks
