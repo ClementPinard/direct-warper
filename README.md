@@ -17,6 +17,10 @@ This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was us
 
 This module is expected to compile for Pytorch `1.0.1`, on `Python > 3.5`.
 
+[UPDATE]
+
+Tested and compiled on Pytorch `1.12.1`, CUDA `11.6`.
+
 # Usage direct projection
 
 `from pytorch_direct_warp.direct_proj import direct_projection`

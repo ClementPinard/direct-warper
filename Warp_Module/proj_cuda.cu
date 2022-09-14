@@ -1,18 +1,18 @@
 #include <ATen/ATen.h>
+#include <torch/types.h>
+using namespace torch;
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include <THC/THC.h>
-#include <THC/THCDeviceTensor.cuh>
 
 
 #include <vector>
 #include <iostream>
 
-#define dTensor3R THCDeviceTensor<scalar_t, 3, size_t, RestrictPtrTraits>
-#define dTensor4R THCDeviceTensor<scalar_t, 4, size_t, RestrictPtrTraits>
-#define dTensor3RLong THCDeviceTensor<long, 3, size_t, RestrictPtrTraits>
+#define dTensor3R PackedTensorAccessor<scalar_t, 3, RestrictPtrTraits, size_t>
+#define dTensor4R PackedTensorAccessor<scalar_t, 4, RestrictPtrTraits, size_t>
+#define dTensor3RLong PackedTensorAccessor<long, 3, RestrictPtrTraits, size_t>
 #define CUDA_KERNEL_LOOP(i, n) \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
 
@@ -36,9 +36,9 @@ static __inline__ __device__ double atomicAdd(double *address, double val) {
 #endif
 
 template <typename scalar_t, int dims>
-THCDeviceTensor<scalar_t, dims, size_t, RestrictPtrTraits>
+PackedTensorAccessor<scalar_t, dims, RestrictPtrTraits, size_t>
 toDeviceTensor(at::Tensor t) {
-  return THCDeviceTensor<scalar_t, dims, size_t, RestrictPtrTraits>
+  return PackedTensorAccessor<scalar_t, dims, RestrictPtrTraits, size_t>
   (t.data<scalar_t>(), (size_t*) t.sizes().data(), (size_t*) t.strides().data());
 }
 
@@ -63,11 +63,11 @@ __global__ void proj_cuda_forward_kernel(
     dTensor3RLong index_map,
     int num_points) {
 
-  const int B = points.getSize(0);
-  const int N = points.getSize(1);
+  const int B = points.size(0);
+  const int N = points.size(1);
 
-  const int H = projected_depth.getSize(1);
-  const int W = projected_depth.getSize(2);
+  const int H = projected_depth.size(1);
+  const int W = projected_depth.size(2);
 
   CUDA_KERNEL_LOOP(i, num_points) {
 
@@ -118,11 +118,11 @@ __global__ void proj_img_cuda_forward_kernel(
     dTensor4R projected_img,
     int num_points) {
 
-  const int B = colors.getSize(0);
-  const int C = colors.getSize(1);
+  const int B = colors.size(0);
+  const int C = colors.size(1);
 
-  const int H = indexMap.getSize(1);
-  const int W = indexMap.getSize(2);
+  const int H = indexMap.size(1);
+  const int W = indexMap.size(2);
 
   CUDA_KERNEL_LOOP(i, num_points) {
 
@@ -146,11 +146,11 @@ __global__ void proj_depth_cuda_backward_kernel(
     dTensor3R gradInput,
     int num_points) {
 
-  const int B = gradInput.getSize(0);
-  const int N = gradInput.getSize(1);
+  const int B = gradInput.size(0);
+  const int N = gradInput.size(1);
 
-  const int H = indexMap.getSize(1);
-  const int W = indexMap.getSize(2);
+  const int H = indexMap.size(1);
+  const int W = indexMap.size(2);
 
   CUDA_KERNEL_LOOP(i, num_points) {
 
@@ -172,12 +172,12 @@ __global__ void proj_img_cuda_backward_kernel(
     dTensor3R gradInput,
     int num_points) {
 
-  const int B = gradInput.getSize(0);
-  const int C = gradInput.getSize(1);
-  const int N = gradInput.getSize(2);
+  const int B = gradInput.size(0);
+  const int C = gradInput.size(1);
+  const int N = gradInput.size(2);
 
-  const int H = indexMap.getSize(1);
-  const int W = indexMap.getSize(2);
+  const int H = indexMap.size(1);
+  const int W = indexMap.size(2);
 
   CUDA_KERNEL_LOOP(i, num_points) {
 
