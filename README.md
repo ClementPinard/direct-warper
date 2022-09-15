@@ -15,11 +15,7 @@ This [tutorial](http://pytorch.org/tutorials/advanced/cpp_extension.html) was us
 
 # Requirements
 
-This module is expected to compile for Pytorch `1.0.1`, on `Python > 3.5`.
-
-[UPDATE]
-
-Tested and compiled on Pytorch `1.12.1`, CUDA `11.6`.
+This module is expected to compile on Pytorch >= `1.11.0` (tested on `1.12.1`, CUDA `11.6`),  `Python > 3.5`
 
 # Usage direct projection
 
@@ -71,4 +67,4 @@ By using these coordinates, inverse warp will try to reconstruct `I1` with pixel
 As you can see, while the inverse warp shows duplication artefacts, the direct Warp shows Nan values where no colorization was done.
 The main interest of this direct warp here is to warp and warp back the depth in its original coordinate system. That way, you can see that occluded values are now considered NaNs.
 
-A more in depth study of this occlusion module is avalaible at this address : hhttps://github.com/ClementPinard/thesis-notebooks
+A more in depth study of this occlusion module is avalaible at this address : https://github.com/ClementPinard/thesis-notebooks
