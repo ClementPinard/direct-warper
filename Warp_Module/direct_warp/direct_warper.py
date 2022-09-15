@@ -5,6 +5,17 @@ from pytorch_direct_warp.direct_proj import direct_projection
 
 
 class DirectWarper(nn.Module):
+    """Apply direct projection from a list of square 3D points, with optional corresponding color.
+    Args:
+        points : List of 3D points with radius R. Size should be BxNx4.
+        colors : List of corresponding colors. Size should BxCxN.
+        pose : rototranslation matrix to multiply the points with before projecting Bx3X4
+        frame_matrix : K intrinsic matrix for projection Bx3X3.
+
+    Returns:
+        depth_map : corresponding depth BxHxW
+        color_map : BxCxHxW
+    """
     def __init__(self, keep_index=False):
         super(DirectWarper, self).__init__()
         self.id_grid = None

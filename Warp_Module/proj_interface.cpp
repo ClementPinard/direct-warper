@@ -43,7 +43,7 @@ at::Tensor proj_img_cpp_backward(
 
 // C++ interface
 
-#define CHECK_CUDA(x) AT_CHECK(x.type().is_cuda(), #x, " must be a CUDA tensor")
+#define CHECK_CUDA(x) TORCH_CHECK(x.type().is_cuda(), #x, " must be a CUDA tensor")
 
 std::vector<at::Tensor> proj_img_forward(
     at::Tensor points,
